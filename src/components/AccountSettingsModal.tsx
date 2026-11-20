@@ -10,7 +10,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import { ModalOverlay } from './ModalOverlay';
-import { api } from '../lib/api';
+import { api, getStorageBackendMode, SUPABASE_SCHEMA_SQL } from '../lib/api';
 import { supabase } from '../supabaseClient';
 import { formatBytes, formatShortDateTime } from '../lib/format';
 import type { CloudProvider, CloudSyncSummary, ThemePreference, UserProfile } from '../types';
@@ -57,6 +57,19 @@ export function AccountSettingsModal({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [avatarFailed, setAvatarFailed] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
+
+  const storageMode = getStorageBackendMode();
+
+  const handleCopySql = async () => {
+    try {
+      await navigator.clipboard.writeText(SUPABASE_SCHEMA_SQL);
+      setCopiedSql(true);
+      window.setTimeout(() => setCopiedSql(false), 2500);
+    } catch {
+      setError('Unable to copy automatically. Check supabase_schema.sql in the project root.');
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -306,6 +319,37 @@ export function AccountSettingsModal({
           </>
         ) : (
           <>
+            {storageMode === 'supabase-db' ? (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <p className="font-semibold">Cross-device sync active (Supabase Cloud Database)</p>
+                <p className="mt-0.5 opacity-90">
+                  Your notes and categories are saved to Supabase Postgres and sync across all computers.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">
+                      {storageMode === 'local-browser'
+                        ? 'Saved in this browser only (Cross-device sync inactive)'
+                        : 'Saved to local server storage'}
+                    </p>
+                    <p className="mt-0.5 opacity-90">
+                      Run <span className="font-mono">supabase_schema.sql</span> once in your Supabase SQL Editor so notes sync across computers.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopySql}
+                    className="h-8 rounded-md bg-amber-900 px-3 text-xs font-medium text-white hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500 whitespace-nowrap shrink-0"
+                  >
+                    {copiedSql ? 'Copied SQL!' : 'Copy SQL Setup'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-3 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
               <div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Synced Notes</p>
