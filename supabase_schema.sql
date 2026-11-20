@@ -1,6 +1,6 @@
 -- Run this script once in your Supabase Dashboard -> SQL Editor
--- It creates the profiles, categories, and notes tables with Row Level Security (RLS)
--- so your AI Notes sync across all computers and browsers.
+-- It creates the profiles, categories, and notes tables, grants role permissions,
+-- and enables Row Level Security (RLS) so AI Notes sync across all computers and browsers.
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -40,6 +40,12 @@ create table if not exists public.notes (
   updated_at timestamptz not null default now()
 );
 
+-- Required table-level permissions for Supabase authenticated users
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on public.profiles to authenticated;
+grant select, insert, update, delete on public.categories to authenticated;
+grant select, insert, update, delete on public.notes to authenticated;
+
 alter table public.profiles enable row level security;
 alter table public.categories enable row level security;
 alter table public.notes enable row level security;
@@ -47,17 +53,20 @@ alter table public.notes enable row level security;
 drop policy if exists "Users can manage own profile" on public.profiles;
 create policy "Users can manage own profile"
   on public.profiles for all
+  to authenticated
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
 drop policy if exists "Users can manage own categories" on public.categories;
 create policy "Users can manage own categories"
   on public.categories for all
+  to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
 drop policy if exists "Users can manage own notes" on public.notes;
 create policy "Users can manage own notes"
   on public.notes for all
+  to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
